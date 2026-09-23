@@ -73,7 +73,7 @@
                             <svg class="w-12 h-12 mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             <span class="font-bold text-sm" id="sourceFileName">تم الرفع بنجاح</span>
                         </div>
-                        <input id="sourceFileInput" type="file" class="hidden" accept=".xlsx, .xls, .csv" />
+                        <input id="sourceFileInput" type="file" class="hidden" accept=".xlsx, .xls, .csv, .xlsm" />
                     </label>
                 </div>
 
@@ -89,7 +89,7 @@
                             <svg class="w-12 h-12 mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             <span class="font-bold text-sm" id="targetFileName">تم الرفع بنجاح</span>
                         </div>
-                        <input id="targetFileInput" type="file" class="hidden" accept=".xlsx, .xls, .csv" />
+                        <input id="targetFileInput" type="file" class="hidden" accept=".xlsx, .xls, .csv, .xlsm" />
                     </label>
                 </div>
             </div>
@@ -217,7 +217,8 @@
         reader.onload = (event) => {
             try {
                 const data = new Uint8Array(event.target.result);
-                currentWorkbook = XLSX.read(data, { type: 'array' });
+                // إضافة bookVBA: true لدعم وحفظ الماكرو
+                currentWorkbook = XLSX.read(data, { type: 'array', bookVBA: true });
                 
                 sourceFileUI.classList.add('hidden');
                 sourceFileSuccess.classList.remove('hidden');
@@ -242,7 +243,8 @@
         reader.onload = (event) => {
             try {
                 const data = new Uint8Array(event.target.result);
-                targetWorkbook = XLSX.read(data, { type: 'array' });
+                // إضافة bookVBA: true للحفاظ على وحدات الماكرو في الملف الوجهة
+                targetWorkbook = XLSX.read(data, { type: 'array', bookVBA: true });
                 targetOriginalFileName = file.name;
                 
                 targetFileUI.classList.add('hidden');
