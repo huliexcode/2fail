@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة نقل بيانات إكسل الذكية</title>
+    <!-- تحميل مكتبة Tailwind CSS للتصميم -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- تحميل مكتبة SheetJS للتعامل مع ملفات إكسل -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- إعدادات الخطوط والألوان المخصصة -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f3f4f6;
+        }
+        /* تصميم مخصص لشريط التمرير */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        /* إخفاء قسم الجدول في البداية */
+        #dataSection {
+            display: none;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+<div class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-md py-4 px-6 md:px-12 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h1 class="text-2xl font-bold">الناقل السريع لبيانات إكسل</h1>
+        </div>
+        <p class="text-indigo-100 hidden md:block text-sm">حدد البيانات، وانقلها بضغطة زر</p>
+    </header>
+
+    <main class="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+        
+        <!-- File Upload Card -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 mb-8" id="uploadSection">
+            <div class="text-center mb-8">
+                <h2 class="text-xl font-semibold text-gray-700">الخطوة الأولى: رفع الملفات</h2>
+                <p class="text-gray-500 text-sm">قم برفع الملف الأساسي (المصدر) والملف الوجهة (الذي سيتم إضافة البيانات إليه)</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Source File -->
+                <div class="flex flex-col items-center">
+                    <label class="mb-2 font-semibold text-indigo-700">الملف الأساسي (المصدر)</label>
+                    <label for="sourceFileInput" class="flex flex-col items-center justify-center w-full h-40 border-2 border-indigo-300 border-dashed rounded-lg cursor-pointer bg-indigo-50 hover:bg-indigo-100 transition-colors relative overflow-hidden">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6" id="sourceFileUI">
+                            <svg class="w-10 h-10 mb-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                            <p class="mb-2 text-sm text-gray-700"><span class="font-semibold">اختر الملف الأساسي</span></p>
+                        </div>
+                        <div id="sourceFileSuccess" class="hidden absolute inset-0 bg-green-50 flex-col items-center justify-center text-green-700 border-green-400">
+                            <svg class="w-12 h-12 mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span class="font-bold text-sm" id="sourceFileName">تم الرفع بنجاح</span>
+                        </div>
+                        <input id="sourceFileInput" type="file" class="hidden" accept=".xlsx, .xls, .csv" />
+                    </label>
+                </div>
+
+                <!-- Target File -->
+                <div class="flex flex-col items-center">
+                    <label class="mb-2 font-semibold text-purple-700">الملف الوجهة (المنقول إليه)</label>
+                    <label for="targetFileInput" class="flex flex-col items-center justify-center w-full h-40 border-2 border-purple-300 border-dashed rounded-lg cursor-pointer bg-purple-50 hover:bg-purple-100 transition-colors relative overflow-hidden">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6" id="targetFileUI">
+                            <svg class="w-10 h-10 mb-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                            <p class="mb-2 text-sm text-gray-700"><span class="font-semibold">اختر الملف الوجهة</span></p>
+                        </div>
+                        <div id="targetFileSuccess" class="hidden absolute inset-0 bg-green-50 flex-col items-center justify-center text-green-700 border-green-400">
+                            <svg class="w-12 h-12 mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span class="font-bold text-sm" id="targetFileName">تم الرفع بنجاح</span>
+                        </div>
+                        <input id="targetFileInput" type="file" class="hidden" accept=".xlsx, .xls, .csv" />
+                    </label>
+                </div>
+            </div>
+            
+            <div class="mt-8 text-center">
+                <button id="startProcessBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    متابعة واستعراض البيانات
+                </button>
+            </div>
+            
+            <div id="loadingIndicator" class="hidden mt-4 text-indigo-600 font-semibold flex items-center justify-center gap-2">
+                <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                جاري قراءة الملف...
+            </div>
+        </div>
+
+        <!-- Data Table Section (Hidden initially) -->
+        <div id="dataSection" class="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-[70vh]">
+            
+            <!-- Controls (Top Bar) -->
+            <div class="p-4 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50 rounded-t-xl">
+                
+                <div class="flex items-center gap-4 w-full md:w-auto">
+                    <!-- Sheet Selector -->
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-semibold text-gray-600">ورقة العمل:</label>
+                        <select id="sheetSelector" class="border border-gray-300 rounded-md p-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <!-- سيتم تعبئتها برمجياً -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Search Input -->
+                <div class="w-full md:w-1/3 relative">
+                    <input type="text" id="searchInput" placeholder="ابحث برقم المعرف، الاسم، أو أي قيمة..." class="w-full border border-gray-300 rounded-lg pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                    <span id="selectionCount" class="text-sm font-semibold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">0 محدد</span>
+                    <button id="exportBtn" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                        دمج وتصدير الملف
+                    </button>
+                    <button id="resetBtn" class="text-gray-500 hover:text-red-500 p-2 transition-colors" title="إلغاء ورفع ملف جديد">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="overflow-auto flex-grow bg-white">
+                <table class="min-w-full divide-y divide-gray-200 text-right w-full border-collapse">
+                    <thead class="bg-gray-50 sticky top-0 shadow-sm z-10" id="tableHead">
+                        <!-- Headers will be injected here -->
+                    </thead>
+                    <tbody class="divide-y divide-gray-200" id="tableBody">
+                        <!-- Rows will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Footer pagination/info (optional) -->
+            <div class="p-3 border-t border-gray-200 bg-gray-50 text-sm text-gray-500 flex justify-between items-center rounded-b-xl">
+                <span id="totalRowsInfo">إجمالي الصفوف: 0</span>
+                <span class="text-xs">يتم البحث والتحديد في الصفحة الحالية</span>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+    // --- State Variables ---
+    let currentWorkbook = null;
+    let targetWorkbook = null; // تخزين الملف الوجهة
+    let targetOriginalFileName = "الملف_المدمج.xlsx";
+    let currentData = []; // Array of Arrays (Row 0 is headers)
+    let selectedRowIndices = new Set();
+    let currentHeaders = [];
+    
+    // --- DOM Elements ---
+    const sourceFileInput = document.getElementById('sourceFileInput');
+    const targetFileInput = document.getElementById('targetFileInput');
+    const sourceFileUI = document.getElementById('sourceFileUI');
+    const sourceFileSuccess = document.getElementById('sourceFileSuccess');
+    const sourceFileNameEl = document.getElementById('sourceFileName');
+    const targetFileUI = document.getElementById('targetFileUI');
+    const targetFileSuccess = document.getElementById('targetFileSuccess');
+    const targetFileNameEl = document.getElementById('targetFileName');
+    const startProcessBtn = document.getElementById('startProcessBtn');
+
+    const uploadSection = document.getElementById('uploadSection');
+    const dataSection = document.getElementById('dataSection');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const sheetSelector = document.getElementById('sheetSelector');
+    const tableHead = document.getElementById('tableHead');
+    const tableBody = document.getElementById('tableBody');
+    const searchInput = document.getElementById('searchInput');
+    const selectionCountEl = document.getElementById('selectionCount');
+    const exportBtn = document.getElementById('exportBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const totalRowsInfo = document.getElementById('totalRowsInfo');
+
+    // --- STREAMING_CHUNK: Handling File Upload and Parsing ---
+    
+    // التحقق من رفع كلا الملفين لتفعيل زر المتابعة
+    function checkFilesReady() {
+        if (currentWorkbook && targetWorkbook) {
+            startProcessBtn.disabled = false;
+        }
+    }
+
+    // معالجة رفع الملف الأساسي (المصدر)
+    sourceFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = new Uint8Array(event.target.result);
+                currentWorkbook = XLSX.read(data, { type: 'array' });
+                
+                sourceFileUI.classList.add('hidden');
+                sourceFileSuccess.classList.remove('hidden');
+                sourceFileSuccess.classList.add('flex');
+                sourceFileNameEl.textContent = file.name;
+                
+                checkFilesReady();
+            } catch (error) {
+                console.error("Error reading source file:", error);
+                alert("حدث خطأ في قراءة الملف الأساسي.");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // معالجة رفع الملف الوجهة
+    targetFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = new Uint8Array(event.target.result);
+                targetWorkbook = XLSX.read(data, { type: 'array' });
+                targetOriginalFileName = file.name;
+                
+                targetFileUI.classList.add('hidden');
+                targetFileSuccess.classList.remove('hidden');
+                targetFileSuccess.classList.add('flex');
+                targetFileNameEl.textContent = file.name;
+                
+                checkFilesReady();
+            } catch (error) {
+                console.error("Error reading target file:", error);
+                alert("حدث خطأ في قراءة الملف الوجهة.");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // بدء العملية عند الضغط على زر المتابعة
+    startProcessBtn.addEventListener('click', () => {
+        loadingIndicator.classList.remove('hidden');
+        
+        setTimeout(() => {
+            // تعبئة قائمة أوراق العمل بناءً على الملف الأساسي
+            sheetSelector.innerHTML = '';
+            currentWorkbook.SheetNames.forEach(sheetName => {
+                const option = document.createElement('option');
+                option.value = sheetName;
+                option.textContent = sheetName;
+                sheetSelector.appendChild(option);
+            });
+
+            if (currentWorkbook.SheetNames.length > 0) {
+                loadSheetData(currentWorkbook.SheetNames[0]);
+            }
+            
+            uploadSection.classList.add('hidden');
+            dataSection.classList.flex = 'flex';
+            dataSection.style.display = 'flex';
+            
+            loadingIndicator.classList.add('hidden');
+        }, 100);
+    });
+
+    // Handle Sheet Change
+    sheetSelector.addEventListener('change', (e) => {
+        loadSheetData(e.target.value);
+    });
+
+    // --- STREAMING_CHUNK: Processing Sheet Data and Rendering Table ---
+    function loadSheetData(sheetName) {
+        const worksheet = currentWorkbook.Sheets[sheetName];
+        // { header: 1 } forces output as Array of Arrays, maintaining empty cells properly
+        currentData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+        
+        // Reset state
+        selectedRowIndices.clear();
+        updateSelectionUI();
+        searchInput.value = '';
+
+        if (currentData.length === 0) {
+            tableHead.innerHTML = '';
+            tableBody.innerHTML = '<tr><td class="p-4 text-center text-gray-500">ورقة العمل فارغة</td></tr>';
+            totalRowsInfo.textContent = 'إجمالي الصفوف: 0';
+            return;
+        }
+
+        currentHeaders = currentData[0] || [];
+        // Optional: Remove trailing empty rows if any generated by sheet_to_json
+        while (currentData.length > 1 && currentData[currentData.length - 1].every(cell => cell === "")) {
+            currentData.pop();
+        }
+
+        renderTable();
+        totalRowsInfo.textContent = `إجمالي الصفوف: ${Math.max(0, currentData.length - 1)}`;
+    }
+
+    function renderTable(filterText = '') {
+        tableHead.innerHTML = '';
+        tableBody.innerHTML = '';
+
+        if (currentData.length === 0) return;
+
+        // Render Headers
+        const headerTr = document.createElement('tr');
+        
+        // "Select All" Checkbox Column
+        const thCheck = document.createElement('th');
+        thCheck.className = 'px-4 py-3 bg-gray-50 border-b border-gray-200 w-12 text-center';
+        const selectAllCb = document.createElement('input');
+        selectAllCb.type = 'checkbox';
+        selectAllCb.className = 'w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer';
+        selectAllCb.id = 'selectAllCb';
+        selectAllCb.addEventListener('change', handleSelectAll);
+        thCheck.appendChild(selectAllCb);
+        headerTr.appendChild(thCheck);
+
+        // Data Columns Headers
+        currentHeaders.forEach(header => {
+            const th = document.createElement('th');
+            th.className = 'px-6 py-3 border-b border-gray-200 bg-gray-50 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap';
+            th.textContent = header || 'بدون عنوان';
+            headerTr.appendChild(th);
+        });
+        tableHead.appendChild(headerTr);
+
+        // Render Body
+        const lowerFilter = filterText.toLowerCase();
+        let visibleRows = 0;
+        
+        // Optimization for very large files: Limit rendering to first 1000 rows initially if no filter
+        // But for this use case, we render all matching rows. 
+        // We start loop from 1 because index 0 is headers.
+        for (let i = 1; i < currentData.length; i++) {
+            const rowData = currentData[i];
+            
+            // Filter Logic: Check if any cell in the row contains the search text
+            if (filterText) {
+                const matches = rowData.some(cell => String(cell).toLowerCase().includes(lowerFilter));
+                if (!matches) continue;
+            }
+
+            visibleRows++;
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-indigo-50 transition-colors border-b border-gray-100';
+            // Highlight if selected
+            if (selectedRowIndices.has(i)) {
+                tr.classList.add('bg-indigo-50/50');
+            }
+
+            // Checkbox Cell
+            const tdCheck = document.createElement('td');
+            tdCheck.className = 'px-4 py-3 whitespace-nowrap text-center';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer row-checkbox';
+            cb.dataset.rowIndex = i;
+            cb.checked = selectedRowIndices.has(i);
+            cb.addEventListener('change', (e) => handleRowSelection(e, i, tr));
+            tdCheck.appendChild(cb);
+            tr.appendChild(tdCheck);
+
+            // Data Cells
+            // We loop based on headers length to ensure grid alignment even if rowData is shorter
+            for (let j = 0; j < currentHeaders.length; j++) {
+                const td = document.createElement('td');
+                td.className = 'px-6 py-3 whitespace-nowrap text-sm text-gray-700';
+                td.textContent = rowData[j] !== undefined && rowData[j] !== null ? rowData[j] : '';
+                tr.appendChild(td);
+            }
+
+            // Allow clicking row to toggle checkbox
+            tr.addEventListener('click', (e) => {
+                if(e.target !== cb) {
+                    cb.checked = !cb.checked;
+                    handleRowSelection({ target: cb }, i, tr);
+                }
+            });
+
+            tableBody.appendChild(tr);
+            
+            // Hard limit to prevent browser freeze on massive files (can be removed if needed)
+            if(visibleRows > 500 && filterText === '') {
+                 const warningTr = document.createElement('tr');
+                 warningTr.innerHTML = `<td colspan="${currentHeaders.length + 1}" class="px-6 py-4 text-center text-sm text-orange-600 bg-orange-50">تم إظهار أول 500 صف فقط لتسريع المتصفح. استخدم البحث للعثور على صفوف محددة.</td>`;
+                 tableBody.appendChild(warningTr);
+                 break;
+            }
+        }
+        
+        updateSelectAllState();
+    }
+
+    // --- STREAMING_CHUNK: Handling Selection Logic and Search ---
+    function handleRowSelection(e, rowIndex, trElement) {
+        if (e.target.checked) {
+            selectedRowIndices.add(rowIndex);
+            trElement.classList.add('bg-indigo-50/50');
+        } else {
+            selectedRowIndices.delete(rowIndex);
+            trElement.classList.remove('bg-indigo-50/50');
+        }
+        updateSelectionUI();
+        updateSelectAllState();
+    }
+
+    function handleSelectAll(e) {
+        const isChecked = e.target.checked;
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        
+        checkboxes.forEach(cb => {
+            cb.checked = isChecked;
+            const rowIndex = parseInt(cb.dataset.rowIndex);
+            const trElement = cb.closest('tr');
+            
+            if (isChecked) {
+                selectedRowIndices.add(rowIndex);
+                trElement.classList.add('bg-indigo-50/50');
+            } else {
+                selectedRowIndices.delete(rowIndex);
+                trElement.classList.remove('bg-indigo-50/50');
+            }
+        });
+        updateSelectionUI();
+    }
+
+    function updateSelectionUI() {
+        const count = selectedRowIndices.size;
+        selectionCountEl.textContent = `${count} محدد`;
+        if (count > 0) {
+            exportBtn.disabled = false;
+            exportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            exportBtn.disabled = true;
+            exportBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    function updateSelectAllState() {
+        const selectAllCb = document.getElementById('selectAllCb');
+        if (!selectAllCb) return;
+        const visibleCheckboxes = document.querySelectorAll('.row-checkbox');
+        
+        if (visibleCheckboxes.length === 0) {
+            selectAllCb.checked = false;
+            return;
+        }
+
+        const allVisibleChecked = Array.from(visibleCheckboxes).every(cb => cb.checked);
+        selectAllCb.checked = allVisibleChecked;
+    }
+
+    // Search input with basic debounce
+    let searchTimeout;
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            renderTable(e.target.value);
+        }, 300); // 300ms delay to prevent lag while typing
+    });
+
+
+    // --- STREAMING_CHUNK: Export Data to New Excel File ---
+    exportBtn.addEventListener('click', () => {
+        if (selectedRowIndices.size === 0 || !targetWorkbook) return;
+
+        // 1. تجهيز البيانات: إضافة الصفوف المحددة فقط (بدون العناوين)
+        const sortedIndices = Array.from(selectedRowIndices).sort((a, b) => a - b);
+        const dataToExport = [];
+        
+        sortedIndices.forEach(idx => {
+            dataToExport.push(currentData[idx]);
+        });
+
+        // 2. دمج البيانات في الملف الوجهة
+        // نختار الورقة الأولى في الملف الوجهة افتراضياً
+        const targetSheetName = targetWorkbook.SheetNames[0];
+        const targetSheet = targetWorkbook.Sheets[targetSheetName];
+
+        // نقوم بإضافة البيانات الجديدة في نهاية الملف الوجهة (origin: -1)
+        XLSX.utils.sheet_add_aoa(targetSheet, dataToExport, { origin: -1 });
+
+        // 3. إنشاء اسم للملف الجديد
+        const nameParts = targetOriginalFileName.split('.');
+        const ext = nameParts.pop();
+        const baseName = nameParts.join('.');
+        const dateStr = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+        const fileName = `${baseName}_محدث_${dateStr}.${ext}`;
+
+        // 4. تصدير الملف
+        XLSX.writeFile(targetWorkbook, fileName);
+    });
+
+    // Reset Application
+    resetBtn.addEventListener('click', () => {
+        if(confirm("هل أنت متأكد من رغبتك في إلغاء العملية والبدء من جديد؟")) {
+            // إعادة تعيين الحقول
+            sourceFileInput.value = '';
+            targetFileInput.value = '';
+            currentWorkbook = null;
+            targetWorkbook = null;
+            currentData = [];
+            selectedRowIndices.clear();
+            
+            // إعادة تعيين واجهة الرفع
+            sourceFileUI.classList.remove('hidden');
+            sourceFileSuccess.classList.add('hidden');
+            sourceFileSuccess.classList.remove('flex');
+            
+            targetFileUI.classList.remove('hidden');
+            targetFileSuccess.classList.add('hidden');
+            targetFileSuccess.classList.remove('flex');
+            
+            startProcessBtn.disabled = true;
+
+            // إخفاء الجدول وإظهار الرفع
+            dataSection.style.display = 'none';
+            uploadSection.classList.remove('hidden');
+            updateSelectionUI();
+        }
+    });
+
+</script>
+</body>
+</html>
